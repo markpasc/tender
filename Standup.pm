@@ -99,10 +99,13 @@ sub next_person {
     my %ignore = map { $_ => 1 } $self->bot->ignore_list;
     my $me = $self->bot->nick;
 
-    my @names = $self->bot->names($channel);
+    my @names = keys %{ $self->bot->channel_data($channel) };
+
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
     @names = grep {
-        !$state->{gone}->{$_} && !$ignore{$_} && !$me
+           !$state->{gone}->{$_}  # already went
+        && $_ ne $me              # the bot doesn't go
+        && !$ignore{$_}           # other bots don't go
     } @names;
     $logger->debug("Minus all the chickens that's: " . join(q{ }, @names));
 
@@ -114,8 +117,9 @@ sub next_person {
 
     $self->bot->say(
         channel => $channel,
-        address => $next,
-        body => q{your turn},
+        who     => $next,
+        address => 1,
+        body    => q{your turn},
     );
 
     return q{};
