@@ -118,6 +118,8 @@ sub start {
 
     $state->{started} = 1;
     $state->{gone} = {};
+    $state->{started} = time;
+
     return $self->next_person($message);
 }
 
@@ -167,9 +169,10 @@ sub done {
     # DONE
     delete $self->{standups}->{ $state->{id} };
 
+    my $min_duration = int ((time - $state->{started}) / 60);
     $self->bot->say(
         channel => $state->{standup_channel},
-        body => q{All done!},
+        body => sprintf(q{All done! Standup was %d minutes.}, $min_duration),
     );
 
     return q{};
