@@ -127,6 +127,11 @@ sub next_person {
     my $state = $self->state_for_message($message);
     my $channel = $state->{standup_channel};
 
+    # You've gone when it's your turn and you ask to next.
+    if ($state->{turn} && $state->{turn} eq $message->{who}) {
+        $state->{gone}->{ $state->{turn} } = 1;
+    }
+
     my @names = keys %{ $self->bot->channel_data($channel) };
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
 
@@ -138,13 +143,11 @@ sub next_person {
     } @names;
     $logger->debug("Minus all the chickens that's: " . join(q{ }, @names));
 
-    # TODO: extra rules go here
-
     return $self->done($message)
         if !@names;
 
     my $next = first { 1 } shuffle @names;
-    $state->{gone}->{$next} = 1;
+    $state->{turn} = $next;
     $logger->debug("I picked $next to go next");
 
     $self->bot->say(
