@@ -5,6 +5,7 @@ package Bot::BasicBot::Pluggable::Module::Standup;
 use strict;
 use base qw( Bot::BasicBot::Pluggable::Module );
 
+use Data::Dumper;
 use List::Util qw( first shuffle );
 
 
@@ -42,6 +43,7 @@ sub told {
         standup => q{standup},
         start   => q{start},
         q{next} => q{next_person},
+        park    => q{park},
     }->{$command};
     return if !$work;
 
@@ -118,6 +120,7 @@ sub start {
 
     $state->{started} = 1;
     $state->{gone} = {};
+    $state->{parkinglot} = [];
     $state->{started} = time;
 
     return $self->next_person($message);
@@ -162,6 +165,14 @@ sub next_person {
     return q{};
 }
 
+sub park {
+    my ($self, $message) = @_;
+    my $state = $self->state_for_message($message);
+
+    push @{ $state->{parkinglot} }, $message->{rest};
+    return "Parked.";
+}
+
 sub done {
     my ($self, $message) = @_;
     my $state = $self->state_for_message($message);
@@ -174,6 +185,14 @@ sub done {
         channel => $state->{standup_channel},
         body => sprintf(q{All done! Standup was %d minutes.}, $min_duration),
     );
+
+    my $logger = Log::Log4perl->get_logger( ref $self );
+    $logger->debug('Parked topics: ' . Dumper($state->{parkinglot}));
+    if (my @parked = @{ $state->{parkinglot} }) {
+        my $team = $state->{team_channel};
+        $self->tell($team, 'Parked topics:');
+        $self->tell($team, ' * ' . $_) for @parked;
+    }
 
     return q{};
 }
