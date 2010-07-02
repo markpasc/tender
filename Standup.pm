@@ -136,6 +136,11 @@ sub next_person {
     if ($state->{turn} && $state->{turn} eq $message->{who}) {
         $state->{gone}->{ $state->{turn} } = 1;
     }
+    # If it's not your turn, avoid double-nexting.
+    elsif ($state->{turn} && time - ($state->{last_next} || 0) <= 15) {
+        $logger->debug(sprintf "Only %d secs since last next, ignoring", time - $state->{last_next});
+        return q{};
+    }
 
     my @names = keys %{ $self->bot->channel_data($channel) };
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
@@ -151,8 +156,16 @@ sub next_person {
     return $self->done($message)
         if !@names;
 
+    # If it's someone's turn but we're skipping them and there's someone else
+    # to pick, don't pick whose turn it already is again immediately.
+    if ($state->{turn} && !$state->{gone}->{ $state->{turn} } && @names > 1) {
+        $logger->debug("Skipping $state->{turn} while there are others to pick");
+        @names = grep { $_ ne $state->{turn} } @names;
+    }
+
     my $next = first { 1 } shuffle @names;
     $state->{turn} = $next;
+    $state->{last_next} = time;
     $logger->debug("I picked $next to go next");
 
     $self->bot->say(
