@@ -1,0 +1,16 @@
+# rename to standup.yaml to use this
+
+server: irc.example.com
+nick: tender
+
+ignore_list:
+    - logbot
+    - stabbot
+
+standups:
+    - id: myteam
+      team_channel: '#myteamchat'
+      standup_channel: '#standup'
+      schedule: '0 11 * * 1,2,4,5'      # 11:00 but not wednesday
+      schedule_tz: America/Los_Angeles  # that's 11:00 PT
+      additional_tz: America/New_York   # but tell us what ET that is
