@@ -68,13 +68,14 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands: standup, start, next, park} if !$help;
+    return q{My commands: standup, start, next, park, when} if !$help;
 
     given ($help) {
         when (/^standup$/) { return q{Tell me 'standup' to start a standup manually.} };
-        when (/^start$/)   { return q{When starting a standup, tell me 'start' when everyone's arrived to begin.} };
-        when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next.} };
-        when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after standup.} };
+        when (/^start$/)   { return q{When starting a standup, tell me 'start' when everyone's arrived and I'll begin the standup.} };
+        when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next. You can also tell me 'next <name>' to tell me <name> should go next.} };
+        when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after we're done.} };
+        when (/^when$/)    { return q{Tell me 'when' and I'll tell you when the next scheduled standup is.} };
         default            { return qq{I don't know what '$help' is.} };
     }
 }
