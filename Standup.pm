@@ -388,13 +388,6 @@ sub chanjoin {
     return q{};
 }
 
-sub tick {
-    my ($self) = @_;
-    my $logger = Log::Log4perl->get_logger( ref $self );
-    $logger->debug('O HAI A TICK');
-    return 0;
-}
-
 
 sub main {
     my $class = shift;
