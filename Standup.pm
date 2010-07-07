@@ -95,10 +95,15 @@ sub said {
         hi      => q{hi},
         standup => q{standup},
         start   => q{start},
-        q{next} => q{next_person},
         park    => q{park},
         q{when} => q{when_standup},
     }->{$command};
+
+    # Be more liberal when matching the 'next' command.
+    if (!$work && $message->{body} =~ m{ \b next \b }imsx) {
+        $work = q{next_person};
+    }
+
     return if !$work;
 
     try {
@@ -217,41 +222,52 @@ sub next_person {
     my $state = $self->state_for_message($message);
     my $channel = $state->{standup_channel};
 
-    # You've gone when it's your turn and you ask to next.
-    if ($state->{turn} && $state->{turn} eq $message->{who}) {
-        $state->{gone}->{ $state->{turn} } = 1;
-    }
     # If it's not your turn, avoid double-nexting.
-    elsif ($state->{turn} && time - ($state->{last_next} || 0) <= 15) {
+    my $not_my_turn = $state->{turn} && $state->{turn} ne $message->{who};
+    if ($not_my_turn && time - ($state->{last_next} || 0) <= 15) {
         $logger->debug(sprintf "Only %d secs since last next, ignoring", time - $state->{last_next});
         return q{};
     }
 
     my @names = keys %{ $self->channel_data($channel) };
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
-
     my %ignore = map { $_ => 1 } $self->ignore_list;
-    @names = grep {
-           !$state->{gone}->{$_}   # already went
-        && $_ ne $self->nick       # the bot doesn't go
-        && !$ignore{$_}            # other bots don't go
-    } @names;
-    $logger->debug("Minus all the chickens that's: " . join(q{ }, @names));
 
-    return $self->done($message)
-        if !@names;
+    # Were any of them also named in the message?
+    my $next = first { $message->{body} =~ m{ \b \Q$_\E \b }imsx } @names;
 
-    # If it's someone's turn but we're skipping them and there's someone else
-    # to pick, don't pick whose turn it already is again immediately.
-    if ($state->{turn} && !$state->{gone}->{ $state->{turn} } && @names > 1) {
-        $logger->debug("Skipping $state->{turn} while there are others to pick");
-        @names = grep { $_ ne $state->{turn} } @names;
+    if (defined $next) {
+        return qq{I'm a chicken and I don't call on chickens.} if $next eq $self->nick;
+        return qq{$next is a chicken and I don't call on chickens.} if $ignore{$next};
+        return qq{$next already went.} if $state->{gone}->{$next};
+        return qq{It's already $next's turn.} if $state->{turn} && $state->{turn} eq $next;
+        $logger->debug("The nexter asked for $next to go next");
+    }
+    else {
+        @names = grep {
+               !$state->{gone}->{$_}   # already went
+            && $_ ne $self->nick       # the bot doesn't go
+            && !$ignore{$_}            # other bots don't go
+        } @names;
+        $logger->debug("Minus all the chickens that's: " . join(q{ }, @names));
+
+        # Was that everyone?
+        return $self->done($message)
+            if !@names;
+
+        # If it's someone's turn but we're skipping them and there's someone else
+        # to pick, don't pick whose turn it already is again immediately.
+        if ($state->{turn} && !$state->{gone}->{ $state->{turn} } && @names > 1) {
+            $logger->debug("Skipping $state->{turn} while there are others to pick");
+            @names = grep { $_ ne $state->{turn} } @names;
+        }
+
+        ($next, undef) = shuffle @names;
+        $logger->debug("I picked $next to go next");
     }
 
-    my $next = first { 1 } shuffle @names;
     $state->{turn} = $next;
     $state->{last_next} = time;
-    $logger->debug("I picked $next to go next");
 
     $self->say(
         channel => $channel,
