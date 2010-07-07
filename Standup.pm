@@ -245,7 +245,13 @@ sub next_person {
         return qq{It's already $next's turn.} if $state->{turn} && $state->{turn} eq $next;
         $logger->debug("The nexter asked for $next to go next");
     }
-    else {
+
+    # You've gone when it's your turn and you ask to next.
+    if ($state->{turn} && $state->{turn} eq $message->{who}) {
+        $state->{gone}->{ $state->{turn} } = 1;
+    }
+
+    if (!defined $next) {
         @names = grep {
                !$state->{gone}->{$_}   # already went
             && $_ ne $self->nick       # the bot doesn't go
