@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
 
-package Bot::BasicBot::Pluggable::Module::Standup;
+package Standup;
 
 use strict;
-use base qw( Bot::BasicBot::Pluggable::Module );
+use base qw( Bot::BasicBot::Pluggable );
 
 use Data::Dumper;
 use List::Util qw( first shuffle );
@@ -11,9 +11,7 @@ use List::Util qw( first shuffle );
 
 sub new {
     my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    $self->{standups} = {};
-    return $self;
+    return $class->SUPER::new(@_, in_progress => {});
 }
 
 # a standup is:
@@ -26,7 +24,7 @@ sub new {
 
 sub help { q{whassap} }
 
-sub told {
+sub said {
     my ($self, $message) = @_;
     my $logger = Log::Log4perl->get_logger( ref $self );
 
@@ -67,7 +65,6 @@ sub standup {
 
     my $logger = Log::Log4perl->get_logger( ref $self );
     $logger->debug("STANDUP self is $self, a " . ref($self));
-    $logger->debug("STANDUP bot is " . $self->bot . ", a " . ref($self->bot));
 
     if ($team_chan ne $standup_chan) {
         $self->say(
@@ -93,16 +90,16 @@ sub state_for_message {
 
     # Which standup is that?
     my $standup = first {    $channel eq $_->{team_channel}
-                          || $channel eq $_->{standup_channel} } @{ $self->get('standups') };
+                          || $channel eq $_->{standup_channel} } @{ $self->{standups} };
     die "I don't know about the $channel standup."
         if !$standup;
 
     my $team = $standup->{id};
-    my $state = $self->{standups}->{$team};
+    my $state = $self->{in_progress}->{$team};
 
     if (!$state && $args{start}) {
         my %standup = %$standup;
-        $self->{standups}->{$team} = $state = \%standup;
+        $self->{in_progress}->{$team} = $state = \%standup;
     }
     elsif (!$state) {
         die "There's no $team standup right now.";
@@ -142,13 +139,13 @@ sub next_person {
         return q{};
     }
 
-    my @names = keys %{ $self->bot->channel_data($channel) };
+    my @names = keys %{ $self->channel_data($channel) };
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
 
-    my %ignore = map { $_ => 1 } $self->bot->ignore_list;
+    my %ignore = map { $_ => 1 } $self->ignore_list;
     @names = grep {
            !$state->{gone}->{$_}   # already went
-        && $_ ne $self->bot->nick  # the bot doesn't go
+        && $_ ne $self->nick       # the bot doesn't go
         && !$ignore{$_}            # other bots don't go
     } @names;
     $logger->debug("Minus all the chickens that's: " . join(q{ }, @names));
@@ -168,7 +165,7 @@ sub next_person {
     $state->{last_next} = time;
     $logger->debug("I picked $next to go next");
 
-    $self->bot->say(
+    $self->say(
         channel => $channel,
         who     => $next,
         address => 1,
@@ -191,10 +188,10 @@ sub done {
     my $state = $self->state_for_message($message);
 
     # DONE
-    delete $self->{standups}->{ $state->{id} };
+    delete $self->{in_progress}->{ $state->{id} };
 
     my $min_duration = int ((time - $state->{started}) / 60);
-    $self->bot->say(
+    $self->say(
         channel => $state->{standup_channel},
         body => sprintf(q{All done! Standup was %d minutes.}, $min_duration),
     );
