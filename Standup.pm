@@ -6,6 +6,7 @@ use strict;
 use base qw( Bot::BasicBot::Pluggable );
 use feature q{switch};
 
+use Try::Tiny;
 use Data::Dumper;
 use List::Util qw( first shuffle );
 
@@ -100,13 +101,13 @@ sub state_for_message {
     my ($self, $message, %args) = @_;
 
     my $channel = $message->{channel};
-    die "What? There's no standup here!"
+    die "What? There's no standup here!\n"
         if !$channel || $channel eq q{msg};
 
     # Which standup is that?
     my $standup = first {    $channel eq $_->{team_channel}
                           || $channel eq $_->{standup_channel} } @{ $self->{standups} };
-    die "I don't know about the $channel standup."
+    die "I don't know about the $channel standup.\n"
         if !$standup;
 
     my $team = $standup->{id};
@@ -117,7 +118,7 @@ sub state_for_message {
         $self->{in_progress}->{$team} = $state = \%standup;
     }
     elsif (!$state) {
-        die "There's no $team standup right now.";
+        die "There's no $team standup right now.\n";
     }
 
     return $state;
