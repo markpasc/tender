@@ -226,4 +226,21 @@ sub tick {
     return 0;
 }
 
+
+sub main {
+    my $class = shift;
+
+    require YAML;
+    my $config = YAML::LoadFile(lc $class . '.yaml');
+
+    # Join all the channels where there are standups or standup teams.
+    my @channels = map { ($_->{team_channel}, $_->{standup_channel}) } @{ $config->{standups} };
+    $config->{channels} = \@channels;
+
+    my $bot = $class->new(%$config);
+    $bot->run();
+}
+
+Standup->main() unless caller;
+
 1;
