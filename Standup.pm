@@ -336,8 +336,14 @@ sub done {
     $logger->debug('Parked topics: ' . Dumper($state->{parkinglot}));
     if (my @parked = @{ $state->{parkinglot} }) {
         my $team = $state->{team_channel};
-        $self->tell($team, 'Parked topics:');
-        $self->tell($team, ' * ' . $_) for @parked;
+        $self->say(
+            channel => $team,
+            body => 'Parked topics:',
+        );
+        $self->say(
+            channel => $team,
+            body => ' * ' . $_,
+        ) for @parked;
     }
 
     return q{};
