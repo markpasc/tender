@@ -9,13 +9,14 @@ use feature q{switch};
 use Try::Tiny;
 use Data::Dumper;
 use List::Util qw( first shuffle );
+use List::MoreUtils qw( first_index );
 use POE qw(Component::Schedule);
 use DateTime::Event::Cron;
 
 
 sub new {
     my $class = shift;
-    return $class->SUPER::new(@_, in_progress => {});
+    return $class->SUPER::new(@_, in_progress => {}, joinlists => {});
 }
 
 sub init {
@@ -214,11 +215,11 @@ sub start {
     $state->{parkinglot} = [];
     $state->{started} = time;
 
-    return $self->next_person($message);
+    return $self->next_person($message, pick_last => 1);
 }
 
 sub next_person {
-    my ($self, $message) = @_;
+    my ($self, $message, %args) = @_;
     my $logger = Log::Log4perl->get_logger( ref $self );
     my $state = $self->state_for_message($message);
     my $channel = $state->{standup_channel};
@@ -263,7 +264,31 @@ sub next_person {
             @names = grep { $_ ne $state->{turn} } @names;
         }
 
-        ($next, undef) = shuffle @names;
+        # When appropriate, pick the last person we saw join the channel.
+        PICKLAST: {
+            if ($args{pick_last}) {
+                $logger->debug("The last shall go first!");
+
+                my $joinlist = $self->{joinlists}->{$channel};
+                if (!$joinlist) {
+                    $logger->debug("Oops, I don't know who joined $channel when; picking at random");
+                    last PICKLAST;
+                }
+
+                my %eligible = map { $_ => 1 } @names;
+                NICK: for my $nick (@$joinlist) {
+                    next NICK if !$eligible{$nick};
+
+                    $logger->debug("Looks like I saw $nick join last");
+                    $next = $nick;
+                    last PICKLAST;
+                }
+
+                $logger->debug("Hmm, I guess I didn't see when anyone who's left joined; picking at random");
+            }
+        };
+
+        ($next, undef) = shuffle @names if !$next;
         $logger->debug("I picked $next to go next");
     }
 
@@ -330,6 +355,31 @@ sub when_standup {
     $blah =~ s{ HOUR 0? }{}gmsx;
 
     return $blah;
+}
+
+sub nick_change {
+    my ($self, $old_nick, $new_nick) = @_;
+
+    for my $joinlist (values %{ $self->{joinlists} }) {
+        for my $nick (@{ $joinlist }) {
+            $nick = $new_nick if $nick eq $old_nick;
+        }
+    }
+
+    return q{};
+}
+
+sub chanjoin {
+    my ($self, $message) = @_;
+    my ($channel, $who) = @$message{qw( channel who )};
+
+    my $joinlist = ($self->{joinlists}->{$channel} ||= []);
+
+    my $i = first_index { $_ eq $who } @$joinlist;
+    delete $joinlist->[$i] if $i != -1;
+
+    push @$joinlist, $who;
+    return q{};
 }
 
 sub tick {
