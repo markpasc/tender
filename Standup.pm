@@ -37,6 +37,7 @@ sub init {
             },
             schedalerm => sub {
                 $logger->debug("YAY SCHEDALERM FOR " . $standup->{id});
+                $self->start_standup($standup);
             },
         } );
     }
@@ -101,6 +102,19 @@ sub said {
 sub hi {
     my ($self, $message) = @_;
     return 'o hai.';
+}
+
+sub start_standup {
+    my ($self, $standup) = @_;
+
+    # Pretend we were started manually, I guess.
+    my $logger = Log::Log4perl->get_logger( ref $self );
+    try {
+        return $self->standup({ channel => $standup->{team_channel} });
+    }
+    catch {
+        $logger->error("Tried to start scheduled standup '$standup->{id}' but: $_");
+    }
 }
 
 sub standup {
