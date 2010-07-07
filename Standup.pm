@@ -264,14 +264,14 @@ sub when_standup {
     my $sched = DateTime::Event::Cron->from_cron($spec);
     my $next_time = $sched->next($now);
 
-    my $dur = $next_time - $now;
-    my $dur_text = $dur->days > 0    ? $dur->days . ' days'
-                 : $dur->hours > 0   ? $dur->hours . ' hours'
-                 : $dur->minutes > 0 ? $dur->minutes . ' minutes'
-                 :                     'no time'
-                 ;
+    my $blah = $next_time->strftime(q{Next standup is %A at HOUR%I:%M %P %Z});
+    if ((my $addl_tz) = $standup->{additional_tz}) {
+        $next_time->set_time_zone($addl_tz);
+        $blah .= $next_time->strftime(q{ (HOUR%I:%M %P %Z)});
+    }
+    $blah =~ s{ HOUR 0? }{}gmsx;
 
-    return q{Next standup is in } . $dur_text . q{ at } . $next_time->iso8601;
+    return $blah;
 }
 
 sub tick {
