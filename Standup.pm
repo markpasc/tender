@@ -4,6 +4,7 @@ package Standup;
 
 use strict;
 use base qw( Bot::BasicBot::Pluggable );
+use feature q{switch};
 
 use Data::Dumper;
 use List::Util qw( first shuffle );
@@ -22,7 +23,21 @@ sub new {
 #   start time
 #   stop time
 
-sub help { q{whassap} }
+sub help {
+    my ($self, $message) = @_;
+    my $help = $message->{body};
+    $help =~ s{ \A help \s* }{}msx;
+
+    return q{My commands: standup, start, next, park} if !$help;
+
+    given ($help) {
+        when (/^standup$/) { return q{Tell me 'standup' to start a standup manually.} };
+        when (/^start$/)   { return q{When starting a standup, tell me 'start' when everyone's arrived to begin.} };
+        when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next.} };
+        when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after standup.} };
+        default            { return qq{I don't know what '$help' is.} };
+    }
+}
 
 sub said {
     my ($self, $message) = @_;
