@@ -9,11 +9,39 @@ use feature q{switch};
 use Try::Tiny;
 use Data::Dumper;
 use List::Util qw( first shuffle );
+use POE qw(Component::Schedule);
+use DateTime::Event::Cron;
 
 
 sub new {
     my $class = shift;
     return $class->SUPER::new(@_, in_progress => {});
+}
+
+sub init {
+    my $self = shift;
+    $self->SUPER::init() or return;
+    my $logger = Log::Log4perl->get_logger( ref $self );
+
+    STANDUP: for my $standup (@{ $self->{standups} }) {
+        my $cronline = $standup->{schedule}
+            or next STANDUP;
+
+        my $when_iter = DateTime::Event::Cron->from_cron($cronline)->iterator(
+            after => DateTime->now( time_zone => $standup->{schedule_tz} || q{UTC} ),
+        );
+
+        my $sesh = POE::Session->create( inline_states => {
+            _start => sub {
+                $_[HEAP]{sched} = POE::Component::Schedule->add($_[SESSION], schedalerm => $when_iter);
+            },
+            schedalerm => sub {
+                $logger->debug("YAY SCHEDALERM FOR " . $standup->{id});
+            },
+        } );
+    }
+
+    return 1;
 }
 
 # a standup is:
@@ -58,6 +86,7 @@ sub said {
         start   => q{start},
         q{next} => q{next_person},
         park    => q{park},
+        q{when} => q{when_standup},
     }->{$command};
     return if !$work;
 
@@ -109,6 +138,8 @@ sub state_for_message {
                           || $channel eq $_->{standup_channel} } @{ $self->{standups} };
     die "I don't know about the $channel standup.\n"
         if !$standup;
+
+    return { %$standup } if $args{not_running};
 
     my $team = $standup->{id};
     my $state = $self->{in_progress}->{$team};
@@ -223,7 +254,30 @@ sub done {
     return q{};
 }
 
+sub when_standup {
+    my ($self, $message) = @_;
+    my $standup = $self->state_for_message($message, not_running => 1);
+    my $now = DateTime->now( time_zone => $standup->{schedule_tz} || q{UTC} ),
+
+    my $spec = $standup->{schedule}
+        or return qq{The $standup->{id} standup doesn't have a schedule.};
+    my $sched = DateTime::Event::Cron->from_cron($spec);
+    my $next_time = $sched->next($now);
+
+    my $dur = $next_time - $now;
+    my $dur_text = $dur->days > 0    ? $dur->days . ' days'
+                 : $dur->hours > 0   ? $dur->hours . ' hours'
+                 : $dur->minutes > 0 ? $dur->minutes . ' minutes'
+                 :                     'no time'
+                 ;
+
+    return q{Next standup is in } . $dur_text . q{ at } . $next_time->iso8601;
+}
+
 sub tick {
+    my ($self) = @_;
+    my $logger = Log::Log4perl->get_logger( ref $self );
+    $logger->debug('O HAI A TICK');
     return 0;
 }
 
