@@ -45,6 +45,16 @@ sub init {
     return 1;
 }
 
+sub get {
+    my ($self, $name) = @_;
+    return $self->store->get(ref $self, $name);
+}
+
+sub set {
+    my ($self, $name, $value) = @_;
+    return $self->store->set(ref $self, $name, $value);
+}
+
 # a standup is:
 #   channel
 #   last to join
@@ -106,14 +116,28 @@ sub hi {
 
 sub start_standup {
     my ($self, $standup) = @_;
+    my $logger = Log::Log4perl->get_logger( ref $self );
+    my $team = $standup->{id};
+
+    # Are we already in a standup?
+    if ($self->{in_progress}->{ $standup->{id} }) {
+        $logger->debug("We were scheduled to start a $team standup, but there's already one going");
+        return;
+    }
+
+    # Did we already have one of those today?
+    my $now = DateTime->now( time_zone => $standup->{schedule_tz} || q{UTC} );
+    if ($self->get(q{last_day_} . $team) eq $now->ymd) {
+        $logger->debug("We were scheduled to start a $team standup, but we already had one for " . $now->ymd(q{/}));
+        return;
+    }
 
     # Pretend we were started manually, I guess.
-    my $logger = Log::Log4perl->get_logger( ref $self );
     try {
         return $self->standup({ channel => $standup->{team_channel} });
     }
     catch {
-        $logger->error("Tried to start scheduled standup '$standup->{id}' but: $_");
+        $logger->error("Tried to start scheduled standup '$team' but: $_");
     }
 }
 
@@ -121,6 +145,9 @@ sub standup {
     my ($self, $message) = @_;
     my $state = $self->state_for_message($message, start => 1);
     my ($team, $team_chan, $standup_chan) = @$state{qw( id team_channel standup_channel )};
+
+    my $now = DateTime->now( time_zone => $state->{schedule_tz} || q{UTC} );
+    $self->set(q{last_day_} . $team, $now->ymd);
 
     my $logger = Log::Log4perl->get_logger( ref $self );
     $logger->debug("STANDUP self is $self, a " . ref($self));
