@@ -394,6 +394,8 @@ sub chanjoin {
     return q{};
 }
 
+sub tick {}
+
 
 sub main {
     my $class = shift;
