@@ -352,14 +352,28 @@ sub done {
 sub when_standup {
     my ($self, $message) = @_;
     my $standup = $self->state_for_message($message, not_running => 1);
-    my $now = DateTime->now( time_zone => $standup->{schedule_tz} || q{UTC} ),
+    my $now = DateTime->now( time_zone => $standup->{schedule_tz} || q{UTC} );
+    my $team = $standup->{id};
 
     my $spec = $standup->{schedule}
-        or return qq{The $standup->{id} standup doesn't have a schedule.};
+        or return qq{The $team standup doesn't have a schedule.};
     my $sched = DateTime::Event::Cron->from_cron($spec);
-    my $next_time = $sched->next($now);
 
-    my $blah = $next_time->strftime(q{Next standup is %A at HOUR%I:%M %P %Z});
+    my $next_time = $sched->next($now);
+    # But is that one scheduled later today, when we already held a manual standup?
+    if ($self->get(qq{last_day_$team}) eq $next_time->ymd) {
+        # Then it's the first one tomorrow.
+        my $tomorrow = $now->clone->add( days => 1 )->truncate( to => q{day} );
+        $next_time = $sched->next($tomorrow);
+    }
+
+    # Tell them!
+    my $blah = q{Next standup is };
+    $blah .= $now->ymd eq $next_time->ymd ? q{today}
+           :                                $next_time->strftime(q{%A})
+           ;
+
+    $blah .= $next_time->strftime(q{ at HOUR%I:%M %P %Z});
     if ((my $addl_tz) = $standup->{additional_tz}) {
         $next_time->set_time_zone($addl_tz);
         $blah .= $next_time->strftime(q{ (HOUR%I:%M %P %Z)});
