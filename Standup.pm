@@ -242,7 +242,7 @@ sub next_person {
         return qq{I'm a chicken and I don't call on chickens.} if $next eq $self->nick;
         return qq{$next is a chicken and I don't call on chickens.} if $ignore{$next};
         return qq{$next already went.} if $state->{gone}->{$next};
-        return qq{It's already $next's turn.} if $state->{turn} && $state->{turn} eq $next;
+        return qq{It's already ${next}'s turn.} if $state->{turn} && $state->{turn} eq $next;
         $logger->debug("The nexter asked for $next to go next");
     }
 
