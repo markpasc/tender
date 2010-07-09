@@ -99,6 +99,7 @@ sub said {
         start   => q{start},
         park    => q{park},
         q{when} => q{when_standup},
+        dump    => q{dump_data},
     }->{$command};
 
     # Be more liberal when matching the 'next' command.
@@ -405,6 +406,18 @@ sub chanjoin {
     delete $joinlist->[$i] if $i != -1;
 
     push @$joinlist, $who;
+    return q{};
+}
+
+sub dump_data {
+    my ($self, $message) = @_;
+    my $logger = Log::Log4perl->get_logger( ref $self );
+
+    my %data = %$self;
+    delete $data{kernel};
+    delete $data{session};
+
+    $logger->debug(Data::Dumper->new([ \%data ])->Indent(2)->Dump());
     return q{};
 }
 
