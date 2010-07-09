@@ -172,6 +172,9 @@ sub standup {
         body => q{Time for standup! Tell me 'start' when everyone's here.},
     );
 
+    # Ask for an update about who's here, in case we got out of sync somehow.
+    $self->names($standup_chan);
+
     return q{};
 }
 
