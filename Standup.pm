@@ -406,7 +406,7 @@ sub chanjoin {
     my $joinlist = ($self->{joinlists}->{$channel} ||= []);
     @$joinlist = grep { $_ && $_ ne $who } @$joinlist;
 
-    push @$joinlist, $who;
+    unshift @$joinlist, $who;
     return q{};
 }
 
