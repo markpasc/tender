@@ -4,9 +4,9 @@ package Standup;
 
 use strict;
 use base qw( Bot::BasicBot::Pluggable );
-use feature q{switch};
 
 use Try::Tiny;
+use Switch qw( Perl6 );
 use Data::Dumper;
 use List::Util qw( first shuffle );
 use List::MoreUtils qw( first_index );
