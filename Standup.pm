@@ -230,7 +230,7 @@ sub next_person {
 
     # If it's not your turn, avoid double-nexting.
     my $not_my_turn = $state->{turn} && $state->{turn} ne $message->{who};
-    if ($not_my_turn && time - ($state->{last_next} || 0) <= 15) {
+    if ($not_my_turn && time - ($state->{last_next} || 0) <= 5) {
         $logger->debug(sprintf "Only %d secs since last next, ignoring", time - $state->{last_next});
         return q{};
     }
