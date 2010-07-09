@@ -401,9 +401,7 @@ sub chanjoin {
     my ($channel, $who) = @$message{qw( channel who )};
 
     my $joinlist = ($self->{joinlists}->{$channel} ||= []);
-
-    my $i = first_index { $_ eq $who } @$joinlist;
-    delete $joinlist->[$i] if $i != -1;
+    @$joinlist = grep { $_ && $_ ne $who } @$joinlist;
 
     push @$joinlist, $who;
     return q{};
