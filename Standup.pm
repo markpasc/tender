@@ -14,6 +14,9 @@ use POE qw(Component::Schedule);
 use DateTime::Event::Cron;
 
 
+my $VERSION = "1.1";
+
+
 sub new {
     my $class = shift;
     return $class->SUPER::new(@_, in_progress => {}, joinlists => {});
@@ -95,6 +98,7 @@ sub said {
 
     my $work = {
         hi      => q{hi},
+        hello   => q{hi},
         standup => q{standup},
         start   => q{start},
         park    => q{park},
@@ -119,7 +123,7 @@ sub said {
 
 sub hi {
     my ($self, $message) = @_;
-    return 'o hai.';
+    return "tender standup-bot $VERSION at your service.";
 }
 
 sub start_standup {
