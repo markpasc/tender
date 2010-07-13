@@ -235,7 +235,8 @@ sub next_person {
         return q{};
     }
 
-    my @names = keys %{ $self->channel_data($channel) };
+    my $channel_data = $self->channel_data($channel);
+    my @names = grep { defined $channel_data->{$_} } keys %$channel_data;
     $logger->debug("I see these folks in $channel: " . join(q{ }, @names));
     my %ignore = map { $_ => 1 } $self->ignore_list;
 
