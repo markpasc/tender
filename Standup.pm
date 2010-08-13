@@ -113,7 +113,10 @@ sub said {
         $work = q{next_person};
     }
 
-    return if !$work;
+    if (!$work) {
+        $logger->debug("$message->{who} told me to '$message->{body}' but what is that");
+        return q{What? ('help' for help)};
+    }
 
     try {
         return $self->can($work)->($self, $message);
