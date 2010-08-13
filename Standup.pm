@@ -72,7 +72,8 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands: standup, start, cancel, next, skip, park, when} if !$help;
+    return q{My commands are: standup, start, cancel, next, skip, park, when. Ask me 'help <command>' for what they do.}
+        if !$help;
 
     given ($help) {
         when (/^standup$/) { return q{Tell me 'standup' to start a standup manually.} };
