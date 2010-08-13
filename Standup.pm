@@ -72,13 +72,14 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands: standup, start, cancel, next, park, when} if !$help;
+    return q{My commands: standup, start, cancel, next, skip, park, when} if !$help;
 
     given ($help) {
         when (/^standup$/) { return q{Tell me 'standup' to start a standup manually.} };
         when (/^start$/)   { return q{When starting a standup, tell me 'start' when everyone's arrived and I'll begin the standup.} };
         when (/^cancel$/)  { return q{When starting a standup, tell me 'cancel' (before we 'start') to forget about it.} };
         when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next. You can also tell me 'next <name>' to tell me <name> should go next.} };
+        when (/^skip$/)    { return q{During standup, tell me 'skip <name>' and I'll pick someone else to go instead.} };
         when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after we're done.} };
         when (/^when$/)    { return q{Tell me 'when' and I'll tell you when the next scheduled standup is.} };
         default            { return qq{I don't know what '$help' is.} };
@@ -118,6 +119,7 @@ sub said {
         standup => q{standup},
         start   => q{start},
         cancel  => q{cancel},
+        skip    => q{skip},
         park    => q{park},
         q{when} => q{when_standup},
         dump    => q{dump_data},
@@ -358,6 +360,37 @@ sub next_person {
     );
 
     return q{};
+}
+
+sub skip {
+    my ($self, $message) = @_;
+    my $state = $self->state_for_message($message);
+
+    my $who = $message->{rest};
+    $who =~ s{ \A \s+ | \s+ \z }{}gmsx;
+    return q{Skip whom?} if !$who;
+
+    # Is that someone in the channel?
+    my $channel = $state->{standup_channel};
+    my $channel_data = $self->channel_data($channel);
+    my %names = map { $_ => 1 }
+                grep { defined $channel_data->{$_} }
+                keys %$channel_data;
+    return qq{$who isn't here to skip right now.} if !$names{$who};
+
+    return qq{$who already went.}
+        if $state->{gone}->{$who};
+
+    # If it's already their turn, pretend they themselves nexted.
+    return $self->next_person({
+        %$message,
+        who => $who,
+        body => q{next},
+    }) if $state->{turn} eq $who;
+
+    # Otherwise just mark them as having gone.
+    $state->{gone}->{$who} = 1;
+    return qq{Okay, I'll skip $who.};
 }
 
 sub park {
