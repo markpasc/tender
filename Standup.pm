@@ -72,11 +72,12 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands: standup, start, next, park, when} if !$help;
+    return q{My commands: standup, start, cancel, next, park, when} if !$help;
 
     given ($help) {
         when (/^standup$/) { return q{Tell me 'standup' to start a standup manually.} };
         when (/^start$/)   { return q{When starting a standup, tell me 'start' when everyone's arrived and I'll begin the standup.} };
+        when (/^cancel$/)  { return q{When starting a standup, tell me 'cancel' (before we 'start') to forget about it.} };
         when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next. You can also tell me 'next <name>' to tell me <name> should go next.} };
         when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after we're done.} };
         when (/^when$/)    { return q{Tell me 'when' and I'll tell you when the next scheduled standup is.} };
@@ -101,6 +102,7 @@ sub said {
         hello   => q{hi},
         standup => q{standup},
         start   => q{start},
+        cancel  => q{cancel},
         park    => q{park},
         q{when} => q{when_standup},
         dump    => q{dump_data},
@@ -224,6 +226,26 @@ sub start {
     $state->{started} = time;
 
     return $self->next_person($message, pick_last => 1);
+}
+
+sub cancel {
+    my ($self, $message) = @_;
+    my $state = $self->state_for_message($message);
+
+    return "The standup already started!"
+        if $state->{started};
+
+    if ($message->{channel} ne $state->{standup_channel}) {
+        my $who = $message->{who};
+        $self->say(
+            channel => $state->{standup_channel},
+            body => qq{Never mind, $who cancelled the standup.},
+        );
+    }
+
+    delete $self->{in_progress}->{ $state->{id} };
+
+    return "Cancelled.";
 }
 
 sub next_person {
