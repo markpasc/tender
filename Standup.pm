@@ -90,6 +90,21 @@ sub said {
     my $logger = Log::Log4perl->get_logger( ref $self );
 
     # Only care if we're addressed.
+    if (!$message->{address}) {
+        # Try harder than Bot::BasicBot to see if we're addressed.
+        my $nick = $self->nick;
+        my $body = $message->{body};
+        if ($message->{body} =~ s{
+            \A                      # first of message
+            (?: .*? [[:punct:]] )?  # up to a grammatic separator
+            \s*
+            (\Q$nick\E) \s*  # bot's name
+            [[:punct:]] \s*  # a grammatic separator (required, unlike normally)
+        }{}imsx) {
+            $message->{address} = $1;
+            $logger->debug("Supermatched addressed message '$body' into '$message->{address}' and '$message->{body}'");
+        }
+    }
     return if !$message->{address};
 
     my ($command, $rest) = split / /, $message->{body}, 2;
