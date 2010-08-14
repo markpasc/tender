@@ -72,7 +72,7 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands are: standup, start, cancel, next, skip, park, when. Ask me 'help <command>' for what they do.}
+    return q{My commands are: standup, start, cancel, next, skip, park, left, when. Ask me 'help <command>' for what they do.}
         if !$help;
 
     given ($help) {
@@ -82,6 +82,7 @@ sub help {
         when (/^next$/)    { return q{During standup, tell me 'next' and I'll pick someone to go next. You can also tell me 'next <name>' to tell me <name> should go next.} };
         when (/^skip$/)    { return q{During standup, tell me 'skip <name>' and I'll pick someone else to go instead.} };
         when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after we're done.} };
+        when (/^left$/)    { return q{During standup, ask me 'left' and I'll tell you who has yet to be called on.} };
         when (/^when$/)    { return q{Tell me 'when' and I'll tell you when the next scheduled standup is.} };
         default            { return qq{I don't know what '$help' is.} };
     }
@@ -114,21 +115,24 @@ sub said {
     $message->{command} = $command;
     $message->{rest} = $rest;
 
-    my $work = {
+    my %commands = (
         hi      => q{hi},
         hello   => q{hi},
         standup => q{standup},
         start   => q{start},
         cancel  => q{cancel},
+        q{next} => q{next_person},
         skip    => q{skip},
         park    => q{park},
+        left    => q{left},
         q{when} => q{when_standup},
         dump    => q{dump_data},
-    }->{$command};
+    );
+    my $work = $commands{$command};
 
-    # Be more liberal when matching the 'next' command.
-    if (!$work && $message->{body} =~ m{ \b next \b }imsx) {
-        $work = q{next_person};
+    # Be more liberal when matching the 'next' and 'left' commands.
+    if (!$work && $message->{body} =~ m{ \b (next|left) \b }imsx) {
+        $work = $commands{$1};
     }
 
     if (!$work) {
@@ -400,6 +404,33 @@ sub park {
 
     push @{ $state->{parkinglot} }, $message->{rest};
     return "Parked.";
+}
+
+sub left {
+    my ($self, $message) = @_;
+    my $state = $self->state_for_message($message);
+
+    my $channel = $state->{standup_channel};
+    my $channel_data = $self->channel_data($channel);
+    my @names = grep { defined $channel_data->{$_} } keys %$channel_data;
+    my %ignore = map { $_ => 1 } $self->ignore_list;
+
+    @names = grep {
+           !$state->{gone}->{$_}   # already went
+        && $_ ne $self->nick       # the bot doesn't go
+        && !$ignore{$_}            # other bots don't go
+    } @names;
+
+    my $intro = q{The folks left are: };
+    if ($state->{turn}) {
+        @names = grep { $_ ne $state->{turn} } @names;
+        return qq{After $state->{turn}, no one is left.}
+            if !@names;
+        $intro = qq{After $state->{turn}, the folks left are: }
+    }
+
+    return q{No one is left.} if !@names;
+    return $intro . join(q{, }, @names);
 }
 
 sub done {
