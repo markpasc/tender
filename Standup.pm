@@ -14,7 +14,7 @@ use POE qw(Component::Schedule);
 use DateTime::Event::Cron;
 
 
-my $VERSION = "1.1";
+my $VERSION = "1.2";
 
 
 sub new {
