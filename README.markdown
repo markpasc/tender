@@ -67,4 +67,22 @@ to start the bot.
 
 ### Using tender ###
 
-Ask tender for `help` to see its commands.
+Standups are better when held at a regular time, so when you can, configure tender with a schedule. Tender will tell you when it's time to have the meeting (though a little warning is always nice, so you should still keep a meeting alarm in your calendar). Use the `when` command to ask tender it will call the next scheduled standup. When you need to hold a standup at an odd time, or if you can't really schedule your team's standup, you can ask for a standup manually with the `standup` command.
+
+After using `standup` or if a standup was scheduled, you can start the standup with `start` or cancel it with `cancel`.
+
+Once the standup starts, the last person to arrive in the standup channel will be called on first. Once you've given your update, use the `next` command to pass to someone else. Once everyone has gone, tender will say so and end the meeting. If you wonder who hasn't yet taken their turns, you can ask with the `left` command. (Don't worry if someone arrives late: as long as they join the standup channel before the last person has gone, they'll get called on to take their turn.)
+
+During the meeting, if a topic comes up that needs discussion, park it for later with the `park <topic>` command. Tender will repeat these topics in the team channel when the meeting is over.
+
+Everyone should try to stay present during the meeting to help keep it short. However if someone had to go AFK and it becomes their turn, you can also use the `next` command during someone else's turn to come back to them later. Tender will pick someone else to go next instead. However, if everyone else has gone, they might be the only team member left to pick, and will get picked again immediately. If someone is in the standup channel accidentally when they aren't actually present, use the `skip <name>` command and they'll be skipped for the whole meeting. (Avoid being that person by not lurking in the standup channel between meetings.)
+
+* `standup`: manually asks for a standup.
+* `start`: begins a standup that was scheduled or asked for with `standup`.
+* `cancel`: cancels a standup that was scheduled or asked for, before it's started with `start`.
+* `next`: finishes your turn, passing it to someone else.
+* `skip <name>`: skips over someone for the rest of the meeting.
+* `park <topic>`: park a topic for later.
+* `left`: asks who hasn't yet taken their turns in the open meeting.
+* `when`: asks when the next scheduled standup will be.
+* `help`: ask tender about these commands.
