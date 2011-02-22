@@ -72,12 +72,10 @@ def main():
     mesgsource, mesgsink = Pipe()
     reader = Process(target=readerloop, args=(mesgsource, args.username, password))
     reader.start()
-    writer = Process(target=WriterLoop(), args=(mesgsink, args.username, password))
-    writer.start()
 
-    # Wait until both are done?
+    WriterLoop()(mesgsink, args.username, password)
+
     reader.join()
-    writer.join()
 
     return 0
 
