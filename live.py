@@ -1,6 +1,8 @@
 import getpass
 import json
+import logging
 from multiprocessing import Process, Pipe
+from pprint import pformat
 import sys
 
 import argparse
@@ -20,6 +22,9 @@ def readerloop(mesgsource, username, password):
                 raise ValueError('Unexpected HTTP response: %r' % resp)
             assert resp.status == 200
             ret = json.loads(cont)
+
+            if not 'messages' in ret:
+                raise ValueError("Unexpected JSON response to live endpoint: %s" % pformat(ret))
 
             for message in ret['messages']:
                 cursor = message['_id']
@@ -52,6 +57,7 @@ class WriterLoop(object):
         while True:
             try:
                 mesg = mesgsink.recv()
+                logging.debug("Received message %s", pformat(mesg))
                 try:
                     func = getattr(self, mesg['kind'])
                 except AttributeError:
@@ -63,6 +69,8 @@ class WriterLoop(object):
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
+
     parser = argparse.ArgumentParser(description='show a live stream of new Convore content for you')
     parser.add_argument('--username', type=str, help='your Convore username', required=True)
     args = parser.parse_args()
