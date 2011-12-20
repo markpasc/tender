@@ -206,7 +206,7 @@ sub standup {
     # Ask for an update about who's here, in case we got out of sync somehow.
     $self->names($standup_chan);
 
-    return q{};
+    return;
 }
 
 sub state_for_message {
@@ -283,7 +283,7 @@ sub next_person {
     my $not_my_turn = $state->{turn} && $state->{turn} ne $message->{who};
     if ($not_my_turn && time - ($state->{last_next} || 0) <= 5) {
         $logger->debug(sprintf "Only %d secs since last next, ignoring", time - $state->{last_next});
-        return q{};
+        return;
     }
 
     my $channel_data = $self->channel_data($channel);
@@ -364,7 +364,7 @@ sub next_person {
         body    => q{your turn},
     );
 
-    return q{};
+    return;
 }
 
 sub skip {
@@ -460,7 +460,7 @@ sub done {
         ) for @parked;
     }
 
-    return q{};
+    return;
 }
 
 sub when_standup {
@@ -506,7 +506,7 @@ sub nick_change {
         }
     }
 
-    return q{};
+    return;
 }
 
 sub chanjoin {
@@ -517,7 +517,7 @@ sub chanjoin {
     @$joinlist = grep { $_ && $_ ne $who } @$joinlist;
 
     unshift @$joinlist, $who;
-    return q{};
+    return;
 }
 
 sub dump_data {
@@ -529,7 +529,7 @@ sub dump_data {
     delete $data{session};
 
     $logger->debug(Data::Dumper->new([ \%data ])->Indent(2)->Dump());
-    return q{};
+    return;
 }
 
 sub tick {}
