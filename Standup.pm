@@ -72,7 +72,7 @@ sub help {
     my $help = $message->{body};
     $help =~ s{ \A help \s* }{}msx;
 
-    return q{My commands are: standup, start, cancel, next, skip, park, left, when. Ask me 'help <command>' for what they do.}
+    return q{My commands are: standup, start, cancel, next, skip, park, left, when, ignore, heed. Ask me 'help <command>' for what they do.}
         if !$help;
 
     given ($help) {
@@ -84,6 +84,8 @@ sub help {
         when (/^park$/)    { return q{During standup, tell me 'park <topic>' and I'll remind you about <topic> after we're done.} };
         when (/^left$/)    { return q{During standup, ask me 'left' and I'll tell you who has yet to be called on.} };
         when (/^when$/)    { return q{Tell me 'when' and I'll tell you when the next scheduled standup is.} };
+        when (/^ignore$/)  { return q{At any time, tell me 'ignore <name>' and I'll ignore that person until I am next restarted.} };
+        when (/^heed$/)    { return q{At any time, tell me 'heed <name>' and I'll stop ignoring that person.} };
         default            { return qq{I don't know what '$help' is.} };
     }
 }
@@ -123,6 +125,8 @@ sub said {
         cancel  => q{cancel},
         q{next} => q{next_person},
         skip    => q{skip},
+        ignore  => q{ignore},
+        heed    => q{heed},
         park    => q{park},
         left    => q{left},
         q{when} => q{when_standup},
@@ -365,6 +369,37 @@ sub next_person {
     );
 
     return;
+}
+
+sub ignore {
+    my ($self, $message) = @_;
+    my $who = $message->{rest};
+    $who =~ s{ \A \s+ | \s+ \z }{}gmsx;
+    return q{Ignore whom?} if !$who;
+
+    if ($who ~~ [$self->ignore_list]) {
+        return qq{I was already ignoring $who.  Use 'heed $who' to cancel.};
+    }
+    else {
+        $self->{ignore_list} = [ $self->ignore_list, $who ];
+        my $msg = qq{Alright, '$who' is now a chicken.};
+        return $msg;
+    }
+}
+
+sub heed {
+    my ($self, $message) = @_;
+    my $who = $message->{rest};
+    $who =~ s{ \A \s+ | \s+ \z }{}gmsx;
+    return q{Heed whom?} if !$who;
+
+    if ($who ~~ [$self->ignore_list]) {
+        $self->{ignore_list} = [ grep { $_ ne $who } $self->ignore_list ];
+        return qq{'$who' is now a pig (not a chicken).};
+    }
+    else {
+        return qq{I'm not ignoring $who};
+    }
 }
 
 sub skip {
