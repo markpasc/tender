@@ -32,6 +32,8 @@ tender is an IRC bot that helps you run standups for distributed teams using IRC
     [11:02] <      tender> Parked topics:
     [11:02] <      tender>  * reticulating the splines
 
+If IRC isn't your cup of tea, you might like [morgenbot](https://github.com/eelzon/morgenbot) for Slack or [hubot-standup](https://github.com/miyagawa/hubot-standup).
+
 
 ### Getting started ###
 
